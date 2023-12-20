@@ -34,7 +34,18 @@ Face::Face(uint16_t screenWidth, uint16_t screenHeight, uint16_t eyeSize)
 	CenterY = Height / 2;
 
 	LeftEye.IsMirrored = true;
-
+  /*int progress =0;
+  while (progress < 108)
+  {
+    u8g2.clearBuffer();
+    u8g2.drawStr(25, 50, "Hola, Soy Didi...");
+    u8g2.drawFrame(0, 10, 128, 20);
+    u8g2.drawBox(10, 15, progress, 10);
+    progress++;
+    u8g2.sendBuffer();
+    delay(10);
+  }
+  delay(1000);*/
   Behavior.Clear();
 	Behavior.Timer.Start();
 }
@@ -78,6 +89,13 @@ void Face::Update() {
 	Draw();
 }
 
+void drawZ(U8G2 &u8g2, int startX, int startY) {
+  u8g2.drawLine(startX, startY, startX + 20, startY);
+  u8g2.drawLine(startX + 20, startY, startX, startY + 20);
+  u8g2.drawLine(startX, startY + 20, startX + 20, startY + 20);
+}
+
+
 void Face::Draw() {
   // Clear the display
   u8g2.clearBuffer();
@@ -90,5 +108,8 @@ void Face::Draw() {
 	RightEye.CenterY = CenterY;
 	RightEye.Draw();
   // Transfer the redrawn buffer to the display
-  u8g2.sendBuffer();
+    u8g2.sendBuffer();
 }
+
+
+
