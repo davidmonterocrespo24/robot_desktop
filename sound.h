@@ -140,12 +140,12 @@ void phrase1()
     for (int i = 0; i <= random(100, 2000); i++)
     {
         tone(speakerPin, k + (-i * 2));
-        delay(random(.9, 2));
+        vTaskDelay(pdMS_TO_TICKS((random(.9, 2))));
     }
     for (int i = 0; i <= random(100, 1000); i++)
     {
         tone(speakerPin, k + (i * 10));
-        delay(random(.9, 2));
+        vTaskDelay(pdMS_TO_TICKS((random(.9, 2))));
     }
 }
 
@@ -156,12 +156,12 @@ void phrase2()
     for (int i = 0; i <= random(100, 2000); i++)
     {
         tone(speakerPin, k + (i * 2));
-        delay(random(.9, 2));
+        vTaskDelay(pdMS_TO_TICKS((random(.9, 2))));
     }
     for (int i = 0; i <= random(100, 1000); i++)
     {
         tone(speakerPin, k + (-i * 10));
-        delay(random(.9, 2));
+        vTaskDelay(pdMS_TO_TICKS((random(.9, 2))));
     }
 }
 
@@ -201,19 +201,19 @@ void playerTone()
     for (int i = 0; i <= random(3, 9); i++)
     {
         tone(speakerPin, K + random(-1700, 2000));
-        delay(random(70, 170));
+        vTaskDelay(pdMS_TO_TICKS((random(70, 170))));
         noTone(speakerPin);
-        delay(random(0, 30));
+        vTaskDelay(pdMS_TO_TICKS((random(0, 30))));
     }
     noTone(speakerPin);
-    delay(random(2000, 4000));
+    vTaskDelay(pdMS_TO_TICKS((random(2000, 4000))));
 }
 
 
 
 void mytone(int freq, int duration) {
   ledcWriteTone(channel, freq);
-  delay(duration);
+  vTaskDelay(pdMS_TO_TICKS((duration)));
   ledcWriteTone(channel, 0);
 }
  
@@ -256,7 +256,7 @@ void StarWarsPlay() {
     mytone(Gb4,S);
     mytone(E4,S);
     mytone(F4,E);
-    delay(E);//PAUSE
+    vTaskDelay(pdMS_TO_TICKS((E)));//PAUSE
     mytone(Bb3,E);
     mytone(Eb4,Q);
     mytone(D4,E+S);
@@ -265,7 +265,7 @@ void StarWarsPlay() {
     mytone(C4,S);
     mytone(B3,S);
     mytone(C4,E);
-    delay(E);//PAUSE QUASI FINE RIGA
+    vTaskDelay(pdMS_TO_TICKS((E)));//PAUSE QUASI FINE RIGA
     mytone(F3,E);
     mytone(Ab3,Q);
     mytone(F3,E+S);
@@ -286,7 +286,7 @@ void StarWarsPlay() {
     mytone(Gb4,S);
     mytone(E4,S);
     mytone(F4,E);
-    delay(E);//PAUSE
+    vTaskDelay(pdMS_TO_TICKS((E)));//PAUSE
     mytone(Bb3,E);
     mytone(Eb4,Q);
     mytone(D4,E+S);
@@ -295,7 +295,7 @@ void StarWarsPlay() {
     mytone(C4,S);
     mytone(B3,S);
     mytone(C4,E);
-    delay(E);//PAUSE QUASI FINE RIGA
+    vTaskDelay(pdMS_TO_TICKS((E)));//PAUSE QUASI FINE RIGA
     mytone(F3,E);
     mytone(Ab3,Q);
     mytone(F3,E+S);
@@ -306,7 +306,16 @@ void StarWarsPlay() {
     mytone(C4,S);
     mytone(LA3,H);
     
-    delay(2*H);
+    vTaskDelay(pdMS_TO_TICKS((2*H)));
+}
+
+void vSoundTask(void *pvParameters)
+{
+    while (1)
+    {
+        playerTone();
+        vTaskDelay(pdMS_TO_TICKS(random(60000, 600000)));
+    }
 }
 
 

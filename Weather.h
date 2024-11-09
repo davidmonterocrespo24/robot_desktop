@@ -56,7 +56,8 @@ void drawWeather(uint8_t symbol, int degree)
     u8g2.setFont(u8g2_font_logisoso32_tf);
     u8g2.setCursor(48 + 3, 42);
     u8g2.print(degree);
-    u8g2.print("°C"); // requires enableUTF8Print()
+    u8g2.print(" C"); // requires enableUTF8Print()
+  
 }
 /*
   Draw a string with specified pixel offset.
@@ -123,20 +124,20 @@ void updateWEATHER() {
     float temperature = dht.readTemperature();
 
     char scrollText[15];
-    sprintf(scrollText, "Humidity:%3d%%", dht.readHumidity());
+    sprintf(scrollText, "Humidity:%3d%%",(int)humidity);
 
     if (temperature >= 25 && humidity >= 70) {
-        draw(scrollText, THUNDER, dht.readTemperature());
+        draw(scrollText, THUNDER,temperature);
     } else if (temperature >= 20 && humidity >= 60) {
-        draw(scrollText, RAIN, dht.readTemperature());
+        draw(scrollText, RAIN,temperature);
     } else if (temperature >= 15 && humidity >= 50) {
-        draw(scrollText, RAIN, dht.readTemperature());
+        draw(scrollText, RAIN, temperature);
     } else if (temperature >= 10 && humidity >= 40) {
-        draw(scrollText, SUN_CLOUD, dht.readTemperature());
+        draw(scrollText, SUN_CLOUD,temperature);
     } else if (temperature < 10 && humidity < 40) {
-        draw(scrollText, CLOUD, dht.readTemperature());
+        draw(scrollText, CLOUD, temperature);
     } else {
-        draw(scrollText, SUN, dht.readTemperature());
+        draw(scrollText, SUN, temperature);
     }
 }
 
