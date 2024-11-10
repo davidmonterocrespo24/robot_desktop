@@ -2,17 +2,30 @@
 #define _SENSORDRIVER_h
 #include "Common.h"
 
-bool isLightOn()
-{
+int minLuz = 10;   // Valor inicial negativo para indicar que no se ha leído aún
+int maxLuz = 10;
+int umbralLuz = 0;
+unsigned long tiempoUltimaLectura = 0;
+const unsigned long intervaloAjuste = 10000; // 20 segundos recalcula el umbral
+
+void ajustarUmbral() {
+  umbralLuz = (minLuz + maxLuz) / 2;
+  Serial.print("Nuevo umbral de luz calculado: ");
+  Serial.println(umbralLuz);
+}
+
+bool isLightOn() {
   int luz = analogRead(LDR_PIN);
-  bool hayLuz = (luz < 10); // Ajusta el valor según tu entorno de luz
-  if (!hayLuz)
-  {
-    Serial.println("No hay Luz" + String(luz));
-  }
-  else
-  {
-    Serial.println("Hay Luz" + String(luz));
+  if (luz < minLuz) minLuz = luz;
+  if (luz > maxLuz) maxLuz = luz;
+  ajustarUmbral();      
+  bool hayLuz = (luz < umbralLuz);  
+  if (!hayLuz) {
+    Serial.print("No hay Luz: " );
+     Serial.println(luz);
+  } else {
+    Serial.print("Hay Luz: ");
+     Serial.println(luz);
   }
   return hayLuz;
 }
@@ -66,7 +79,7 @@ void vReadSensorTask(void *pvParameters)
   bool isLightOnPreviously = false;
 
   while (1)
-  {   
+  {
     int STATE = currentState;
 
     if (isMovementDetected() && STATE == SLEEP)

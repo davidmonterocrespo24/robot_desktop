@@ -153,6 +153,30 @@ void vMoveServoTask(void *pvParameters)
         vTaskDelay(pdMS_TO_TICKS(1000));
         ServoDerecha.write(60);
         ServoIzquierda.write(0);
+        vTaskDelay(pdMS_TO_TICKS(505));
+
+        ServoDerecha.write(45);
+        ServoIzquierda.write(45);
+        vTaskDelay(pdMS_TO_TICKS(505));
+
+        ServoDerecha.write(60);
+        ServoIzquierda.write(60);
+        vTaskDelay(pdMS_TO_TICKS(505));
+
+        ServoDerecha.write(45);
+        ServoIzquierda.write(45);
+        vTaskDelay(pdMS_TO_TICKS(505));
+
+        ServoDerecha.write(60);
+        ServoIzquierda.write(60);
+        vTaskDelay(pdMS_TO_TICKS(505));
+
+        ServoDerecha.write(45);
+        ServoIzquierda.write(45);
+        vTaskDelay(pdMS_TO_TICKS(505));
+
+        ServoDerecha.write(60);
+        ServoIzquierda.write(60);
         break;
 
       default:

@@ -11,9 +11,9 @@
 // GLOBALS
 Face *face;
 
-unsigned long lastMovementTime = 0;            // Tiempo del último movimiento detectado
-const unsigned long WEATHER_TIMEOUT = 600000;  // 10 minutos en milisegundos
-const unsigned long SLEEP_TIMEOUT = 3600000;   // 1 hora en milisegundos
+unsigned long lastMovementTime = 0;           // Tiempo del último movimiento detectado
+const unsigned long WEATHER_TIMEOUT = 600000; // 10 minutos en milisegundos
+const unsigned long SLEEP_TIMEOUT = 3600000;  // 1 hora en milisegundos
 
 int progress = 0;
 
@@ -42,57 +42,72 @@ TaskHandle_t soundHandle;
 
 TaskHandle_t sensorHandle;
 
-
-
-
-void vUpdateFaceTask(void *pvParameters) {
-  while (1) {
+void vUpdateFaceTask(void *pvParameters)
+{
+  while (1)
+  {
 
     face->RandomBehavior = false;
     face->RandomBlink = true;
     face->RandomLook = true;
 
-    if (currentState == NORMAL) {
+    if (currentState == NORMAL)
+    {
       Serial.println("STATE Normal   224****************************************");
       face->RandomBehavior = true;
-    } else if (currentState == SOUND) {
+    }
+    else if (currentState == SOUND)
+    {
       // Acciones para el estado NERVIOSO
       eEmotions cEmotion = face->Behavior.CurrentEmotion;
-      if (cEmotion != eEmotions::Surprised) {
+      if (cEmotion != eEmotions::Surprised)
+      {
         face->Expression.GoTo_Surprised();
       }
       Serial.println("STATE = SONIDO ..... *************************************************");
-    } else if (currentState == MOVE) {
+    }
+    else if (currentState == MOVE)
+    {
       // Acciones para el estado MOVE
       Serial.println("STATE = MOVE ......  *************************************************");
       eEmotions cEmotion = face->Behavior.CurrentEmotion;
-      if (cEmotion != eEmotions::Focused) {
+      if (cEmotion != eEmotions::Focused)
+      {
         face->Expression.GoTo_Focused();
       }
-    } else if (currentState == SLEEP) {
+    }
+    else if (currentState == SLEEP)
+    {
       Serial.println("STATE = SLEEP ..... **************************************************");
       face->RandomBehavior = false;
       face->RandomBlink = false;
       face->RandomLook = false;
       Serial.println(face->Behavior.CurrentEmotion);
       Serial.println(eEmotions::Sleepy);
-      if (face->Behavior.CurrentEmotion != eEmotions::Sleepy) {
+      if (face->Behavior.CurrentEmotion != eEmotions::Sleepy)
+      {
         face->Behavior.CurrentEmotion = eEmotions::Sleepy;
         face->Expression.GoTo_Sleepy();
         Serial.println("GoTo_Sleepy");
-      } else {
+      }
+      else
+      {
         Serial.println("Distinto ******------------------------------------------------------------------------------************");
         face->Update();
       }
-    } else if (currentState == WEATHER) {
-      
+    }
+    else if (currentState == WEATHER)
+    {
+
       Serial.println("STATE = Weather ..... ************************************************");
       Serial.println(analogRead(LDR_PIN));
       face->Expression.GoTo_Normal();
       updateWEATHER();
       vTaskDelay(pdMS_TO_TICKS(100));
       continue;
-    } else if (currentState == INICIO) {
+    }
+    else if (currentState == INICIO)
+    {
       currentState = SLEEP;
     }
 
@@ -101,13 +116,13 @@ void vUpdateFaceTask(void *pvParameters) {
   }
 }
 
-void setup(void) {
+void setup(void)
+{
   // Create a serial connection
   Serial.begin(115200);
   Serial.println("Iniciando................");
   ServoDerecha.write(0);
   ServoDerecha.write(90);
-
 
   pinMode(PIR_PIN, INPUT);
   // pinMode(SOUND_PIN, INPUT);
@@ -118,13 +133,12 @@ void setup(void) {
   // Configure input pins
   pinMode(SOUND_PIN, OUTPUT);
   randomSeed(analogRead(0));
-  
+
   // StarWarsPlay();
   // Create a new face
 
   face = new Face(/* screenWidth = */ 128, /* screenHeight = */ 64, /* eyeSize = */ 40);
 
-  
   initDht();
 
   delay(3000);
@@ -170,37 +184,37 @@ void setup(void) {
   delay(3000);
 
   xTaskCreatePinnedToCore(
-    vUpdateFaceTask, /* Task function. */
-    "Update face",   /* name of task. */
-    10000,           /* Stack size of task */
-    NULL,            /* parameter of the task */
-    1,               /* priority of the task */
-    &faceHandle,     /* Task handle to keep track of created task */
-    0);              /* pin task to core 0 */
+      vUpdateFaceTask, /* Task function. */
+      "Update face",   /* name of task. */
+      10000,           /* Stack size of task */
+      NULL,            /* parameter of the task */
+      1,               /* priority of the task */
+      &faceHandle,     /* Task handle to keep track of created task */
+      0);              /* pin task to core 0 */
 
   xTaskCreatePinnedToCore(
-    vMoveServoTask, /* Task function. */
-    "Update Servo", /* name of task. */
-    10000,          /* Stack size of task */
-    face,           /* parameter of the task */
-    5,              /* priority of the task */
-    &servoHandle,   /* Task handle to keep track of created task */
-    1);             /* pin task to core 0 */
+      vMoveServoTask, /* Task function. */
+      "Update Servo", /* name of task. */
+      10000,          /* Stack size of task */
+      face,           /* parameter of the task */
+      5,              /* priority of the task */
+      &servoHandle,   /* Task handle to keep track of created task */
+      1);             /* pin task to core 0 */
 
   xTaskCreatePinnedToCore(
-    vReadSensorTask, /* Task function. */
-    "Read Sensor",   /* name of task. */
-    10000,           /* Stack size of task */
-    NULL,            /* parameter of the task */
-    10,              /* priority of the task */
-    &sensorHandle,   /* Task handle to keep track of created task */
-    1);              /* pin task to core 0 */
+      vReadSensorTask, /* Task function. */
+      "Read Sensor",   /* name of task. */
+      10000,           /* Stack size of task */
+      NULL,            /* parameter of the task */
+      10,              /* priority of the task */
+      &sensorHandle,   /* Task handle to keep track of created task */
+      1);              /* pin task to core 0 */
 
-   /* xTaskCreatePinnedToCore(
-    vSoundTask, /* Task function. */
+  /* xTaskCreatePinnedToCore(
+   vSoundTask, /* Task function. */
   //  "Sound",   /* name of task. */
   //  10000,           /* Stack size of task */
-    //NULL,            /* parameter of the task */
+  // NULL,            /* parameter of the task */
   //  10,              /* priority of the task */
   //  &sensorHandle,   /* Task handle to keep track of created task */
   //  1);              /* pin task to core 0 */
@@ -208,6 +222,7 @@ void setup(void) {
   Serial.println("Finalizando MAIN");
 }
 
-void loop() {
+void loop()
+{
   // vUpdateFaceTask();
 }
