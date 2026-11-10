@@ -1,0 +1,46 @@
+model: doc\Robot ESP32 V2 - copia.FCStd
+
+check 1: every printed part is one closed, valid solid
+  carcasa          ok
+  chasis           ok
+  pata_derecha     ok
+  pata_izquierda   ok
+  tapon_frontal    ok
+  oreja_derecha    ok
+  oreja_izquierda  ok
+
+check 2: where the parts of the model touch each other (mm3 shared)
+  carcasa          x chasis             133.0
+  carcasa          x pata_derecha        24.8
+  carcasa          x pata_izquierda       2.0
+  carcasa          x tapon_frontal        3.3
+  carcasa          x tapon_frontal_2      3.3
+  chasis           x pata_izquierda      23.3
+  chasis           x servo_derecho       59.2
+  chasis           x servo_izquierdo     49.1
+  chasis           x oled                 6.7
+  chasis           x cargador             1.1
+  chasis           x bateria            196.5
+  chasis           x dht11                9.3
+  pata_izquierda   x bateria             25.0
+  oreja_derecha    x servo_derecho        1.8
+  oreja_izquierda  x servo_izquierdo      1.8
+
+check 3: the ears turn from 0 (lying back) to 180 (front) without hitting anything
+  oreja_derecha    clear   (press fit on the spline: 1.8 mm3)
+  oreja_izquierda  clear   (press fit on the spline: 1.8 mm3)
+
+print files (cad/stl), each lying on its side with the least surface over the air:
+  part             on the bed       bed mm2   air mm2  size mm                PLA
+  carcasa          face 1063 mm2       1063      1196   40.4 x  50.4 x  58.7  ~14 g
+  chasis           -Y                   232      1545   33.3 x  53.2 x  54.4  ~16 g
+  pata_derecha     -Z                   185       500   13.5 x  64.8 x  49.0  ~6 g
+  pata_izquierda   -Z                   185       488   12.5 x  64.8 x  49.0  ~6 g
+  tapon_frontal    -Y                    34        32    9.2 x   9.2 x  16.0  ~2 g  (x2)
+  oreja_derecha    +X                   383        11   54.1 x  12.7 x   5.7  ~2 g
+  oreja_izquierda  -X                   383        11   54.1 x  12.7 x   5.7  ~2 g
+  about 48 g of PLA if printed solid (less with infill)
+
+left out of the model: Body042, Body055
+
+ALL CHECKS PASSED

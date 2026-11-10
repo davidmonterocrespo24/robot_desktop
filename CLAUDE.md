@@ -56,3 +56,7 @@ plus `Ears` and `Buzzer`. No FreeRTOS tasks.
 - Float literals need the `f` suffix: the ESP32 FPU is single precision only.
 - `src/clips/ClipData.cpp` is generated (`tools/gif2clip.py`), never edit it.
 - `emulator/assets/robot/` is generated (`tools/export_cad.py`, needs FreeCAD).
+- `cad/stl/`, `cad/ensamblado/`, `cad/esp32_eyes.step` and `cad/export_stl.log` are generated
+  by `cad/export_stl.py` (FreeCAD) from `doc/Robot ESP32 V2 - copia.FCStd`. The ears are
+  not in the FCStd: they are defined in that script. The README pictures `doc/cad-*.png`
+  come from `tools/render_stl.py`.

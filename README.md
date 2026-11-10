@@ -10,7 +10,8 @@ el robot pasa de una emoción a otra caminando por un **grafo de emociones** (la
 del "Emotion Engine" de Eilik). Además de caras hace **animaciones**: juega al pong con
 los ojos, sigue una mosca, estornuda, riega una planta... también calculadas. Todo el
 firmware corre en **Windows**, dentro de un emulador que muestra el robot en 3D armado
-a partir de los CAD de `doc/`.
+a partir de los CAD de `doc/`. Las piezas para imprimirlo están en [`cad/stl/`](cad/stl)
+(ver [Imprimir el cuerpo](#imprimir-el-cuerpo)).
 
 | Qué | Cuántos | Dónde se ven |
 | --- | --- | --- |
@@ -100,6 +101,79 @@ de `shot` tienen que ser absolutas.
 ./facetool.exe list
 make gifs                                   # todo -> doc/expressions/ y doc/animations/
 ```
+
+---
+
+## Imprimir el cuerpo
+
+![armado](doc/cad-ensamblado.png)
+
+Los STL están en [`cad/stl/`](cad/stl), ya acostados en la posición de impresión:
+
+| Archivo | Cant. | Qué es | Cómo va en la cama | Soportes |
+| --- | --- | --- | --- | --- |
+| `carcasa.stl` | 1 | La pieza blanca: frente, techo y costados | Con el techo abajo | Sí |
+| `chasis.stl` | 1 | La pieza negra: marco de la pantalla, servos, ESP32, batería | Con el frente abajo | Sí |
+| `pata_derecha.stl`, `pata_izquierda.stl` | 1 + 1 | Las patas (derecha mirando al robot de frente) | Paradas sobre la suela | Sí, en la cadera |
+| `oreja_derecha.stl`, `oreja_izquierda.stl` | 1 + 1 | Las orejas verdes | Planas | No |
+| `tapon_frontal.stl` | 2 | Los tapones de los dos agujeros de abajo del frente | Parado sobre la pestaña | No |
+
+![piezas en la cama](doc/cad-piezas.png)
+
+PLA a 0,2 mm con 15–20 % de relleno. Todas juntas pesarían unos 48 g macizas, así que
+con relleno es bastante menos. Además:
+
+- [`cad/esp32_eyes.step`](cad/esp32_eyes.step) es el robot entero, con la electrónica
+  y las orejas, para abrirlo en cualquier CAD.
+- [`cad/ensamblado/`](cad/ensamblado) tiene las mismas piezas en su lugar. Abiertas
+  juntas en un visor de STL, se ve cómo cierra.
+
+### Armado
+
+![despiece](doc/cad-despiece.png)
+
+1. **El chasis.** La pantalla en el marco, el ESP32 parado detrás, los dos servos arriba
+   con los ejes hacia los costados, el DHT11 contra la ventana trasera, la batería en el
+   medio y el cargador abajo con el USB-C hacia atrás. Los cables y una prueba después
+   de cada pieza están en [`doc/circuito.html`](doc/circuito.html).
+2. **La carcasa.** El chasis entra por detrás. En el CAD van sin holgura: si no entra,
+   lijar el costado derecho por dentro (ver más abajo).
+3. **Las patas.** El perno de la cadera va en el agujero redondo de cada costado. Si
+   queda flojo, una gota de pegamento.
+4. **Los tapones** en los dos agujeros de abajo del frente.
+5. **Las orejas**, con el firmware cargado. Escribir `asleep` en la consola para que los
+   servos vayan a la posición de oreja acostada. Encastrar cada oreja a presión en el
+   eje, apuntando hacia atrás, y ajustarla con el tornillito que trae el servo. Después,
+   `surprised` las para y `furious` las lleva hacia adelante. Si una va al revés, se
+   corrige en `Config.h` (ver *Calibrar las orejas* más abajo).
+
+### Lo que hay que saber
+
+- **Las orejas son nuevas.** No estaban en el CAD: las genera `cad/export_stl.py` con la
+  misma forma que las del emulador. Están medidas sobre el modelo del servo GH-S37D, que
+  tiene el eje estriado de 3,5 mm. El agujero mide 3,4 mm para que entre a presión, y
+  del otro lado tienen un rebaje para la cabeza del tornillo. Todavía no se imprimieron:
+  si entra floja, una gota de pegamento; si no entra, repasar con una broca de 3,5 mm.
+  El script comprueba que, girando de 0 a 180°, no tocan nada.
+- **El resto sale tal cual del CAD** (`doc/Robot ESP32 V2 - copia.FCStd`), sin
+  retoques. El script avisa dónde se tocan las piezas en el modelo
+  ([`cad/export_stl.log`](cad/export_stl.log)):
+  - La carcasa y el chasis comparten 133 mm³. Por el costado derecho están a ras, con
+    0,2 mm de interferencia, y en la esquina delantera derecha se pisan hasta 1,9 mm.
+  - El perno de cada pata entra con algo de interferencia en la carcasa o en el chasis
+    (unos 25 mm³ cada una).
+- Hay dos cuerpos del CAD que no se exportan, `Cuerpo042` y `Cuerpo055`: casi todo su
+  volumen cae dentro del chasis y parecen ayudas de modelado.
+
+Para regenerar todo después de cambiar el CAD (necesita FreeCAD 1.0):
+
+```bash
+"C:/Program Files/FreeCAD 1.0/bin/freecadcmd.exe" -c "exec(open('cad/export_stl.py').read())"
+python tools/render_stl.py        # las imágenes de esta sección
+```
+
+El script elige solo la posición de impresión de cada pieza: la que deja menos
+superficie en el aire, apoyada de forma estable.
 
 ---
 
@@ -321,7 +395,8 @@ triángulos con los colores del CAD y las deja en `emulator/assets/robot/`:
 La tabla `ROLES` del script dice qué es cada objeto (carcasa, cabeza, servo...). El eje
 de los servos y el área encendida de la pantalla se miden sobre las mallas, así que al
 mover piezas en el CAD y exportar de nuevo el emulador se acomoda solo. Las orejas
-verdes no están en el CAD: el emulador las genera.
+verdes no están en el CAD: el emulador las genera, y `cad/export_stl.py` hace las de
+imprimir con la misma forma (ver [Imprimir el cuerpo](#imprimir-el-cuerpo)).
 
 ---
 
