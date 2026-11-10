@@ -1,3 +1,9 @@
 
 /.history
 /.vscode
+# emulator build output and recordings
+emulator/*.o
+emulator/*.d
+emulator/*.exe
+emulator/captures/
+*.FCBak

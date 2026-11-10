@@ -1,0 +1,473 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- Maquina de estados del robot. Sale de src/brain/Brain.cpp y Config.h:
+     si cambia el comportamiento, actualizar este archivo. -->
+<title>Estados de Robot Eyes</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@112,600;112,700&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+  html { color-scheme: light dark; }
+  body { margin: 0; }
+  :root {
+    --bg: #F2F4F1;
+    --surface: #FFFFFF;
+    --ink: #17211C;
+    --muted: #57675E;
+    --line: #CBD4CE;
+    --edge: #6B7A72;
+    --sleep: #5B4FCF;   --sleep-bg: #ECEAFB;
+    --wake: #178A43;    --wake-bg: #E3F4E9;
+    --react: #B4650A;   --react-bg: #FBEEDC;
+    --show: #1E6FC4;    --show-bg: #E2EEFB;
+    --info: #0B8580;    --info-bg: #DDF3F1;
+    --manual: #667085;  --manual-bg: #EEF0F3;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      color-scheme: dark;
+      --bg: #0E1311; --surface: #151C19; --ink: #E3EAE5; --muted: #95A59C; --line: #2B3631; --edge: #8A9A91;
+      --sleep: #A79EFF; --sleep-bg: #211E3D;
+      --wake: #4CD07F;  --wake-bg: #13301F;
+      --react: #F0A94A; --react-bg: #362611;
+      --show: #6FB2FF;  --show-bg: #13263D;
+      --info: #4FD1CB;  --info-bg: #0F2E2D;
+      --manual: #A7B0BC; --manual-bg: #22282F;
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --bg: #0E1311; --surface: #151C19; --ink: #E3EAE5; --muted: #95A59C; --line: #2B3631; --edge: #8A9A91;
+    --sleep: #A79EFF; --sleep-bg: #211E3D;
+    --wake: #4CD07F;  --wake-bg: #13301F;
+    --react: #F0A94A; --react-bg: #362611;
+    --show: #6FB2FF;  --show-bg: #13263D;
+    --info: #4FD1CB;  --info-bg: #0F2E2D;
+    --manual: #A7B0BC; --manual-bg: #22282F;
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: "IBM Plex Sans", system-ui, sans-serif;
+    font-size: 15px;
+    line-height: 1.55;
+  }
+  .page {
+    max-width: 1120px;
+    margin: 0 auto;
+    padding-inline: 20px;
+    padding-block: 36px 64px;
+    display: flex;
+    flex-direction: column;
+    gap: 44px;
+  }
+  h1, h2 {
+    font-family: "Archivo", "IBM Plex Sans", system-ui, sans-serif;
+    font-stretch: 112%;
+    text-wrap: balance;
+    margin: 0;
+    line-height: 1.15;
+  }
+  h1 { font-size: clamp(28px, 4.4vw, 40px); font-weight: 700; letter-spacing: -0.01em; }
+  h2 { font-size: 21px; font-weight: 600; }
+  p { margin: 0; max-width: 68ch; }
+  .lede { font-size: 17px; color: var(--muted); }
+  header, section { display: flex; flex-direction: column; gap: 14px; }
+  code, .mono { font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: 0.92em; }
+  code { background: var(--manual-bg); padding: 1px 5px; border-radius: 4px; }
+
+  figure { margin: 0; display: flex; flex-direction: column; gap: 10px; }
+  .scroll { overflow-x: auto; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); }
+  .scroll svg { display: block; width: 100%; min-width: 940px; height: auto; }
+  figcaption { color: var(--muted); font-size: 13.5px; max-width: 78ch; }
+
+  /* ---- diagram */
+  svg text { font-family: "IBM Plex Sans", system-ui, sans-serif; fill: var(--ink); }
+  .node rect { stroke-width: 1.6; }
+  .node .t { font-family: "IBM Plex Mono", ui-monospace, monospace; font-weight: 600; font-size: 13px; letter-spacing: 0.06em; }
+  .node .s { font-size: 11.5px; fill: var(--muted); }
+  .sleep rect { fill: var(--sleep-bg); stroke: var(--sleep); }   .sleep .t { fill: var(--sleep); }
+  .wake rect { fill: var(--wake-bg); stroke: var(--wake); }      .wake .t { fill: var(--wake); }
+  .react rect { fill: var(--react-bg); stroke: var(--react); }   .react .t { fill: var(--react); }
+  .show rect { fill: var(--show-bg); stroke: var(--show); }      .show .t { fill: var(--show); }
+  .info rect { fill: var(--info-bg); stroke: var(--info); }      .info .t { fill: var(--info); }
+  .manual rect { fill: var(--manual-bg); stroke: var(--manual); stroke-dasharray: 5 4; } .manual .t { fill: var(--manual); }
+  .edge { fill: none; stroke: var(--edge); stroke-width: 1.5; }
+  .edge.noise { stroke: var(--react); }
+  .head { fill: var(--edge); }
+  .head.noise { fill: var(--react); }
+  .lbl { font-size: 12px; paint-order: stroke; stroke: var(--surface); stroke-width: 4px; stroke-linejoin: round; }
+  .lbl.noise { fill: var(--react); }
+  .start { fill: var(--ink); }
+
+  .band { stroke: var(--surface); stroke-width: 2; }
+  .axis { stroke: var(--edge); stroke-width: 1.2; }
+  .tick { font-size: 11.5px; fill: var(--muted); font-family: "IBM Plex Mono", ui-monospace, monospace; }
+  .bandlbl { font-size: 12.5px; font-weight: 600; }
+
+  /* ---- tables */
+  .tablewrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); }
+  table { border-collapse: collapse; width: 100%; font-size: 14px; }
+  th, td { text-align: left; vertical-align: top; padding: 10px 14px; border-bottom: 1px solid var(--line); }
+  tr:last-child td { border-bottom: 0; }
+  th { font-weight: 600; font-size: 12px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); white-space: nowrap; }
+  td.num { font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .wide { min-width: 860px; }
+  .pill {
+    display: inline-block; font-family: "IBM Plex Mono", ui-monospace, monospace; font-weight: 600; font-size: 11.5px;
+    letter-spacing: 0.05em; padding: 2px 8px; border-radius: 999px; border: 1.4px solid; white-space: nowrap;
+  }
+  .p-sleep { color: var(--sleep); background: var(--sleep-bg); }
+  .p-wake { color: var(--wake); background: var(--wake-bg); }
+  .p-react { color: var(--react); background: var(--react-bg); }
+  .p-show { color: var(--show); background: var(--show-bg); }
+  .p-info { color: var(--info); background: var(--info-bg); }
+  .p-manual { color: var(--manual); background: var(--manual-bg); border-style: dashed; }
+  .dim { color: var(--muted); }
+
+  .two { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 28px; align-items: start; }
+  .two > div { display: flex; flex-direction: column; gap: 12px; }
+  ol, ul { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 6px; max-width: 68ch; }
+  kbd {
+    font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: 12px; font-weight: 600;
+    border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 5px; padding: 1px 6px; background: var(--surface);
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+<header>
+  <h1>Máquina de estados del robot</h1>
+  <p class="lede">Qué hace el robot en cada momento y qué lo hace cambiar. Sale del código de <code>src/brain/Brain.cpp</code>; los tiempos son los de <code>Config.h</code>.</p>
+</header>
+
+<section>
+  <h2>Los ocho estados</h2>
+  <figure>
+    <div class="scroll">
+      <svg viewBox="0 0 1060 580" role="img" aria-label="Diagrama de estados: Dormido pasa a Despertando y a Despierto cuando llega alguien o vuelve la luz. Desde Despierto sale a Reaccionando, Show y Temperatura y vuelve. A oscuras o tras 45 minutos solo pasa a Adormeciéndose y a Dormido. Un ruido lleva a Reaccionando desde casi cualquier estado.">
+        <defs>
+          <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+            <path class="head" d="M0,0 L10,5 L0,10 z"/>
+          </marker>
+          <marker id="arrn" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+            <path class="head noise" d="M0,0 L10,5 L0,10 z"/>
+          </marker>
+        </defs>
+
+        <!-- edges -->
+        <path class="edge noise" marker-end="url(#arrn)" d="M70,268 L70,58 Q70,40 88,40 L862,40 Q880,40 880,58 L880,112"/>
+        <path class="edge" marker-end="url(#arr)" d="M150,268 C150,190 190,141 245,141"/>
+        <path class="edge" marker-end="url(#arr)" d="M415,141 C480,141 520,190 520,256"/>
+        <path class="edge" marker-end="url(#arr)" d="M490,354 C490,420 470,469 420,469"/>
+        <path class="edge" marker-end="url(#arr)" d="M240,469 C170,469 140,410 140,342"/>
+        <path class="edge" marker-end="url(#arr)" d="M360,440 C360,385 400,335 455,335"/>
+        <path class="edge" marker-end="url(#arr)" d="M625,256 C640,180 710,138 790,134"/>
+        <path class="edge" marker-end="url(#arr)" d="M790,154 C735,160 690,215 667,276"/>
+        <path class="edge" marker-end="url(#arr)" d="M665,296 L820,296"/>
+        <path class="edge" marker-end="url(#arr)" d="M820,318 L665,318"/>
+        <path class="edge" marker-end="url(#arr)" d="M630,354 C650,430 715,470 790,474"/>
+        <path class="edge" marker-end="url(#arr)" d="M790,456 C740,450 690,400 668,338"/>
+        <path class="edge" marker-end="url(#arr)" d="M545,354 L545,424"/>
+        <path class="edge" marker-end="url(#arr)" d="M575,424 L575,354"/>
+        <path class="edge" marker-end="url(#arr)" d="M960,221 L960,276"/>
+        <path class="edge noise" marker-end="url(#arrn)" d="M860,276 L860,170"/>
+        <circle class="start" cx="960" cy="214" r="6"/>
+
+        <!-- edge labels -->
+        <text class="lbl noise" x="475" y="32" text-anchor="middle">un ruido lo despierta sobresaltado</text>
+        <text class="lbl" x="212" y="208">llega alguien</text>
+        <text class="lbl" x="212" y="223">o vuelve la luz</text>
+        <text class="lbl" x="506" y="172">1,8 s</text>
+        <text class="lbl" x="330" y="520" text-anchor="middle">8 s a oscuras y sin movimiento,</text>
+        <text class="lbl" x="330" y="535" text-anchor="middle">o 45 min sin nadie</text>
+        <text class="lbl" x="128" y="446" text-anchor="end">se duerme</text>
+        <text class="lbl" x="370" y="374" text-anchor="end">llega alguien o luz</text>
+        <text class="lbl" x="672" y="118" text-anchor="end">ruido · llega alguien</text>
+        <text class="lbl" x="672" y="133" text-anchor="end">calor o frío · cara al azar</text>
+        <text class="lbl" x="735" y="222">pasan 2–5 s</text>
+        <text class="lbl" x="742" y="286" text-anchor="middle">saludo · show al azar</text>
+        <text class="lbl" x="742" y="336" text-anchor="middle">termina</text>
+        <text class="lbl" x="742" y="404">7 s, o un ruido</text>
+        <text class="lbl" x="880" y="520" text-anchor="middle">solo más de 2 min: cada 2 min</text>
+        <text class="lbl" x="880" y="535" text-anchor="middle">3 pasadas de mano sobre la luz</text>
+        <text class="lbl" x="880" y="550" text-anchor="middle">tecla I o comando info</text>
+        <text class="lbl" x="972" y="244">enciende:</text>
+        <text class="lbl" x="972" y="259">PowerOn</text>
+        <text class="lbl noise" x="852" y="228" text-anchor="end">ruido</text>
+
+        <!-- nodes -->
+        <g class="node sleep">
+          <rect x="30" y="268" width="170" height="74" rx="12"/>
+          <text class="t" x="115" y="294" text-anchor="middle">DORMIDO</text>
+          <text class="s" x="115" y="312" text-anchor="middle">cara Asleep y Zzz</text>
+          <text class="s" x="115" y="327" text-anchor="middle">ronca cada 25–70 s</text>
+        </g>
+        <g class="node sleep">
+          <rect x="245" y="112" width="170" height="58" rx="12"/>
+          <text class="t" x="330" y="137" text-anchor="middle">DESPERTANDO</text>
+          <text class="s" x="330" y="155" text-anchor="middle">cara Sleepy</text>
+        </g>
+        <g class="node sleep">
+          <rect x="240" y="440" width="180" height="58" rx="12"/>
+          <text class="t" x="330" y="465" text-anchor="middle">ADORMECIÉNDOSE</text>
+          <text class="s" x="330" y="483" text-anchor="middle">Sleepy 3,5 s, Yawn 2,6 s</text>
+        </g>
+        <g class="node wake">
+          <rect x="455" y="256" width="210" height="98" rx="14"/>
+          <text class="t" x="560" y="290" text-anchor="middle" style="font-size:15px">DESPIERTO</text>
+          <text class="s" x="560" y="311" text-anchor="middle">descansa en la cara de su ánimo</text>
+          <text class="s" x="560" y="327" text-anchor="middle">Normal · Bored · Happy · Sad · Angry</text>
+        </g>
+        <g class="node react">
+          <rect x="790" y="112" width="180" height="58" rx="12"/>
+          <text class="t" x="880" y="137" text-anchor="middle">REACCIONANDO</text>
+          <text class="s" x="880" y="155" text-anchor="middle">una cara durante 2–5 s</text>
+        </g>
+        <g class="node show">
+          <rect x="820" y="276" width="180" height="58" rx="12"/>
+          <text class="t" x="910" y="301" text-anchor="middle">SHOW</text>
+          <text class="s" x="910" y="319" text-anchor="middle">animación o clip GIF</text>
+        </g>
+        <g class="node info">
+          <rect x="790" y="440" width="180" height="58" rx="12"/>
+          <text class="t" x="880" y="465" text-anchor="middle">TEMPERATURA</text>
+          <text class="s" x="880" y="483" text-anchor="middle">pantalla durante 7 s</text>
+        </g>
+        <g class="node manual">
+          <rect x="495" y="424" width="130" height="52" rx="12"/>
+          <text class="t" x="560" y="446" text-anchor="middle">MANUAL</text>
+          <text class="s" x="560" y="463" text-anchor="middle">cara pedida 8–12 s</text>
+        </g>
+      </svg>
+    </div>
+    <figcaption>El ciclo de la izquierda es dormir y despertar; a la derecha están las tres cosas que hace despierto. Las flechas naranjas son ruidos. A <span class="mono">MANUAL</span> se entra desde cualquier estado con un comando por serie o un click en el emulador; mientras dura, el robot ignora los sensores.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Qué hace cada sensor en cada estado</h2>
+  <div class="tablewrap">
+    <table class="wide">
+      <thead>
+        <tr><th>Estado</th><th>Llega alguien (PIR)</th><th>Ruido</th><th>Luz</th><th>Paso del tiempo</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><span class="pill p-sleep">DORMIDO</span></td>
+          <td>Se despierta despacio, pasando por Sleepy.</td>
+          <td>Se despierta de golpe: <span class="mono">Surprised</span> 2,2 s.</td>
+          <td>Si vuelve la luz, se despierta.</td>
+          <td>Ronca con una burbuja cada 25–70 s.</td>
+        </tr>
+        <tr>
+          <td><span class="pill p-sleep">DESPERTANDO</span></td>
+          <td class="dim">—</td><td class="dim">—</td><td class="dim">—</td>
+          <td>A los 1,8 s queda despierto.</td>
+        </tr>
+        <tr>
+          <td><span class="pill p-wake">DESPIERTO</span></td>
+          <td>Saluda. Cuál saludo depende de la situación (tabla de abajo).</td>
+          <td>Reacciona 2,6 s. Cuanto más enojo acumulado, más fuerte.</td>
+          <td>8 s a oscuras y sin movimiento: empieza a dormirse. Tres pasadas de mano: temperatura.</td>
+          <td>Cada 5–13 s hace algo por su cuenta. Cada 45 s revisa calor y frío. Solo más de 2 min: temperatura cada 2 min. Solo 45 min: se duerme.</td>
+        </tr>
+        <tr>
+          <td><span class="pill p-react">REACCIONANDO</span></td>
+          <td>Solo suma simpatía, no corta la reacción.</td>
+          <td>Reacción nueva, un escalón más arriba.</td>
+          <td>No se duerme hasta terminar.</td>
+          <td>A los 2–5 s vuelve a su cara de reposo.</td>
+        </tr>
+        <tr>
+          <td><span class="pill p-show">SHOW</span></td>
+          <td>Solo suma simpatía.</td>
+          <td>Corta el show y reacciona.</td>
+          <td>No se duerme hasta terminar.</td>
+          <td>Cuando termina la animación o el clip, vuelve a reposo.</td>
+        </tr>
+        <tr>
+          <td><span class="pill p-sleep">ADORMECIÉNDOSE</span></td>
+          <td>Se arrepiente y queda despierto.</td>
+          <td><span class="mono">Surprised</span> 2 s.</td>
+          <td>Si vuelve la luz, queda despierto.</td>
+          <td>Sleepy 3,5 s, bosteza 2,6 s y se duerme.</td>
+        </tr>
+        <tr>
+          <td><span class="pill p-info">TEMPERATURA</span></td>
+          <td class="dim">—</td>
+          <td>Vuelve a la cara.</td>
+          <td class="dim">—</td>
+          <td>A los 7 s vuelve a la cara.</td>
+        </tr>
+        <tr>
+          <td><span class="pill p-manual">MANUAL</span></td>
+          <td class="dim">ignorado</td><td class="dim">ignorado</td><td class="dim">ignorado</td>
+          <td>Cumplido el tiempo vuelve a reposo. Si la cara pedida era Asleep, queda dormido.</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+  <p>Las tres pasadas de mano sobre el sensor de luz muestran la temperatura desde cualquier estado menos Dormido.</p>
+</section>
+
+<section class="two">
+  <div>
+    <h2>Cómo saluda cuando llega alguien</h2>
+    <p>Se evalúa en este orden y gana el primero que se cumple.</p>
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th>Situación</th><th>Qué hace</th></tr></thead>
+        <tbody>
+          <tr><td>Está enojado</td><td>No saluda</td></tr>
+          <tr><td>Estuvo más de 10 min solo</td><td>Fuegos artificiales o un corazón <span class="pill p-show">SHOW</span></td></tr>
+          <tr><td>Es la primera persona desde que despertó</td><td>Globo «HOLA!» <span class="pill p-show">SHOW</span></td></tr>
+          <tr><td>Está contento</td><td>Glee, Wink, Excited, Proud o Love, 3 s</td></tr>
+          <tr><td>Cualquier otro caso</td><td>Curious 2,6 s y mira hacia un costado</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+  <div>
+    <h2>Cómo reacciona a un ruido</h2>
+    <p>Cada ruido suma 0,35 de enojo, que se va solo en unos 40 s. La cara sale del enojo acumulado.</p>
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th>Enojo</th><th>Cara</th><th>Ruidos seguidos</th></tr></thead>
+        <tbody>
+          <tr><td class="num">menos de 0,4</td><td>Surprised</td><td class="num">1</td></tr>
+          <tr><td class="num">0,4 a 0,7</td><td>Scared</td><td class="num">2</td></tr>
+          <tr><td class="num">0,7 a 1,0</td><td>Angry</td><td class="num">3</td></tr>
+          <tr><td class="num">1,0 o más</td><td>Furious</td><td class="num">4</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<section>
+  <h2>El ánimo decide la cara de reposo</h2>
+  <p>Dos valores lentos hacen de memoria. <strong>Simpatía</strong> sube 0,3 cada vez que aparece alguien y se agota en 4 minutos. <strong>Enojo</strong> sube con los ruidos. El ánimo se recalcula todo el tiempo y gana la primera regla que se cumple.</p>
+  <div class="tablewrap">
+    <table>
+      <thead><tr><th>Ánimo</th><th>Entra cuando</th><th>Sale cuando</th><th>Cara de reposo</th></tr></thead>
+      <tbody>
+        <tr><td>Angry</td><td>enojo mayor a 0,7</td><td>enojo menor a 0,35</td><td>Angry</td></tr>
+        <tr><td>Sad</td><td>más de 10 min sin nadie</td><td>aparece alguien</td><td>Sad</td></tr>
+        <tr><td>Happy</td><td>simpatía mayor a 0,6</td><td>simpatía menor a 0,3</td><td>Happy</td></tr>
+        <tr><td>Normal</td><td>ninguna de las anteriores</td><td class="dim">—</td><td>Normal, o Bored tras 2 min sin nadie</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p>Cada 5–13 s, si no pasó nada, hace algo por su cuenta: 30 % de las veces una animación que combine con el ánimo, 10 % un clip GIF (solo en Normal o Happy), y el resto una cara vecina en el grafo.</p>
+</section>
+
+<section>
+  <h2>Qué pasa si lo dejás solo</h2>
+  <figure>
+    <div class="scroll">
+      <svg viewBox="0 0 1060 170" role="img" aria-label="Línea de tiempo sin nadie cerca: hasta los 2 minutos sigue Normal, de 2 a 10 minutos está Bored y muestra la temperatura cada 2 minutos, de 10 a 45 minutos está Sad, y a los 45 minutos se duerme.">
+        <!-- 20 px per minute, 0 min at x = 60 -->
+        <rect class="band" x="60" y="62" width="40" height="38" fill="var(--wake-bg)"/>
+        <rect class="band" x="100" y="62" width="160" height="38" fill="var(--manual-bg)"/>
+        <rect class="band" x="260" y="62" width="700" height="38" fill="var(--show-bg)"/>
+        <rect class="band" x="960" y="62" width="70" height="38" fill="var(--sleep-bg)"/>
+        <text class="bandlbl" x="80" y="52" text-anchor="middle">Normal</text>
+        <text class="bandlbl" x="180" y="86" text-anchor="middle">Bored</text>
+        <text class="bandlbl" x="610" y="86" text-anchor="middle">Sad</text>
+        <text class="bandlbl" x="995" y="86" text-anchor="middle" fill="var(--sleep)">duerme</text>
+
+        <!-- temperature screen every 2 minutes -->
+        <g fill="var(--info)">
+          <rect x="99" y="28" width="3" height="12"/><rect x="139" y="28" width="3" height="12"/>
+          <rect x="179" y="28" width="3" height="12"/><rect x="219" y="28" width="3" height="12"/>
+          <rect x="259" y="28" width="3" height="12"/><rect x="299" y="28" width="3" height="12"/>
+          <rect x="339" y="28" width="3" height="12"/><rect x="379" y="28" width="3" height="12"/>
+          <rect x="419" y="28" width="3" height="12"/><rect x="459" y="28" width="3" height="12"/>
+          <rect x="499" y="28" width="3" height="12"/><rect x="539" y="28" width="3" height="12"/>
+          <rect x="579" y="28" width="3" height="12"/><rect x="619" y="28" width="3" height="12"/>
+          <rect x="659" y="28" width="3" height="12"/><rect x="699" y="28" width="3" height="12"/>
+          <rect x="739" y="28" width="3" height="12"/><rect x="779" y="28" width="3" height="12"/>
+          <rect x="819" y="28" width="3" height="12"/><rect x="859" y="28" width="3" height="12"/>
+          <rect x="899" y="28" width="3" height="12"/><rect x="939" y="28" width="3" height="12"/>
+        </g>
+        <text class="tick" x="110" y="18" fill="var(--info)" style="fill:var(--info)">pantalla de temperatura, 7 s cada 2 min</text>
+
+        <line class="axis" x1="60" y1="112" x2="1030" y2="112"/>
+        <g class="axis">
+          <line x1="60" y1="108" x2="60" y2="118"/><line x1="100" y1="108" x2="100" y2="118"/>
+          <line x1="260" y1="108" x2="260" y2="118"/><line x1="460" y1="108" x2="460" y2="118"/>
+          <line x1="660" y1="108" x2="660" y2="118"/><line x1="860" y1="108" x2="860" y2="118"/>
+          <line x1="960" y1="108" x2="960" y2="118"/>
+        </g>
+        <text class="tick" x="60" y="134" text-anchor="middle">0</text>
+        <text class="tick" x="100" y="134" text-anchor="middle">2</text>
+        <text class="tick" x="260" y="134" text-anchor="middle">10</text>
+        <text class="tick" x="460" y="134" text-anchor="middle">20</text>
+        <text class="tick" x="660" y="134" text-anchor="middle">30</text>
+        <text class="tick" x="860" y="134" text-anchor="middle">40</text>
+        <text class="tick" x="960" y="134" text-anchor="middle">45</text>
+        <text class="tick" x="60" y="154">minutos desde el último movimiento</text>
+      </svg>
+    </div>
+    <figcaption>A escala: 45 minutos de izquierda a derecha. Cualquier movimiento frente al PIR vuelve el reloj a cero. Si además está a oscuras, no espera los 45 minutos: se duerme a los 8 segundos.</figcaption>
+  </figure>
+</section>
+
+<section class="two">
+  <div>
+    <h2>Cuándo muestra la temperatura</h2>
+    <ul>
+      <li><strong>Solo más de 2 minutos:</strong> la muestra 7 s y repite cada 2 min, hasta que llega alguien o se duerme.</li>
+      <li><strong>Tres pasadas de mano</strong> sobre el sensor de luz en menos de 6 s.</li>
+      <li><strong>A pedido:</strong> tecla <kbd>I</kbd> en el emulador o <code>info</code> por serie.</li>
+    </ul>
+    <p>Antes de mostrarla cierra los ojos, y los abre al volver. Dormido no la muestra nunca. Las dos primeras necesitan una lectura válida del DHT.</p>
+    <p>Aparte, cada 45 s revisa el valor: con 31 °C o más pone cara de calor 5 s, con 12 °C o menos cara de frío.</p>
+  </div>
+  <div>
+    <h2>Verlo en el emulador</h2>
+    <p>Con la tecla <kbd>Q</kbd> este diagrama aparece debajo del robot, en vivo: el estado actual resaltado, la flecha del último cambio, el motivo y los relojes que van a disparar el próximo.</p>
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th>Para ver</th><th>Hacé</th></tr></thead>
+        <tbody>
+          <tr><td>Dormirse</td><td><kbd>L</kbd> y esperar 8 s</td></tr>
+          <tr><td>Despertar despacio</td><td>dormido, <kbd>L</kbd> otra vez o <kbd>M</kbd></td></tr>
+          <tr><td>Despertar sobresaltado</td><td>dormido, <kbd>S</kbd></td></tr>
+          <tr><td>Saludo y ponerse contento</td><td><kbd>M</kbd> varias veces</td></tr>
+          <tr><td>Escalera de enojo</td><td><kbd>S</kbd> cuatro veces seguidas</td></tr>
+          <tr><td>Temperatura</td><td><kbd>I</kbd>, o <kbd>L</kbd> seis veces, una por segundo</td></tr>
+          <tr><td>Bored, Sad y dormirse solo</td><td>mantener <kbd>F</kbd> (tiempo ×20)</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<section>
+  <h2>Los tiempos, y dónde se cambian</h2>
+  <div class="tablewrap">
+    <table>
+      <thead><tr><th>Constante en Config.h</th><th>Valor</th><th>Qué controla</th></tr></thead>
+      <tbody>
+        <tr><td class="mono">T_DARK_TO_SLEEP_MS</td><td class="num">8 s</td><td>A oscuras y quieto hasta empezar a dormirse</td></tr>
+        <tr><td class="mono">T_BORED_MS</td><td class="num">2 min</td><td>Sin nadie hasta aburrirse y empezar a mostrar la temperatura</td></tr>
+        <tr><td class="mono">T_LONELY_MS</td><td class="num">10 min</td><td>Sin nadie hasta ponerse triste</td></tr>
+        <tr><td class="mono">T_SLEEP_MS</td><td class="num">45 min</td><td>Sin nadie hasta dormirse</td></tr>
+        <tr><td class="mono">IDLE_MIN_MS / IDLE_MAX_MS</td><td class="num">5–13 s</td><td>Cada cuánto hace algo por su cuenta</td></tr>
+        <tr><td class="mono">ACT_CHANCE / CLIP_CHANCE</td><td class="num">30 % / 10 %</td><td>Animación o clip en vez de una cara</td></tr>
+        <tr><td class="mono">INFO_SCREEN_MS</td><td class="num">7 s</td><td>Cuánto dura la pantalla de temperatura</td></tr>
+        <tr><td class="mono">LIGHT_WAVES_FOR_INFO</td><td class="num">3</td><td>Pasadas de mano para pedir la temperatura</td></tr>
+        <tr><td class="mono">HOT_ABOVE_C / COLD_BELOW_C</td><td class="num">31 °C / 12 °C</td><td>Umbrales de calor y frío</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+</div>
+</body>
+</html>

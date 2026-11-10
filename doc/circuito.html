@@ -1,0 +1,553 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- Circuito y armado del robot. Los pines salen de Config.h: si cambian alla,
+     actualizar este archivo y las dos imagenes (circuito.png, circuito-alimentacion.png). -->
+<title>Circuito de Robot Eyes</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@112,600;112,700&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+  html { color-scheme: light dark; }
+  :root {
+    --bg: #F2F4F1;
+    --surface: #FFFFFF;
+    --ink: #17211C;
+    --muted: #57675E;
+    --line: #CBD4CE;
+    --chip: #EEF0F3;
+    --board: #1F5D46;
+    --board-ink: #EAF6EF;
+    --board-dim: #9CC7B2;
+    --part: #F7F8F6;
+    --accent: #178A43;
+    --warn: #A85B00;      --warn-bg: #FBEEDC;
+    /* wires */
+    --w-3v3: #D23B2E;
+    --w-5v: #C46A00;
+    --w-bat: #A83A98;
+    --w-gnd: #5B6672;
+    --w-i2c: #1E6FC4;
+    --w-servo: #178A43;
+    --w-sensor: #0B8580;
+    --w-buzz: #5B4FCF;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      color-scheme: dark;
+      --bg: #0E1311; --surface: #151C19; --ink: #E3EAE5; --muted: #95A59C; --line: #2B3631;
+      --chip: #22282F; --board: #17402F; --board-ink: #E3F3EA; --board-dim: #7FA896; --part: #1B2420;
+      --accent: #4CD07F; --warn: #F0A94A; --warn-bg: #362611;
+      --w-3v3: #FF7A6B; --w-5v: #FFAE45; --w-bat: #F08AE0; --w-gnd: #9AA6B2;
+      --w-i2c: #6FB2FF; --w-servo: #4CD07F; --w-sensor: #4FD1CB; --w-buzz: #A79EFF;
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --bg: #0E1311; --surface: #151C19; --ink: #E3EAE5; --muted: #95A59C; --line: #2B3631;
+    --chip: #22282F; --board: #17402F; --board-ink: #E3F3EA; --board-dim: #7FA896; --part: #1B2420;
+    --accent: #4CD07F; --warn: #F0A94A; --warn-bg: #362611;
+    --w-3v3: #FF7A6B; --w-5v: #FFAE45; --w-bat: #F08AE0; --w-gnd: #9AA6B2;
+    --w-i2c: #6FB2FF; --w-servo: #4CD07F; --w-sensor: #4FD1CB; --w-buzz: #A79EFF;
+  }
+
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: "IBM Plex Sans", system-ui, sans-serif;
+    font-size: 15px;
+    line-height: 1.55;
+  }
+  .page {
+    max-width: 1120px;
+    margin: 0 auto;
+    padding-inline: 20px;
+    padding-block: 36px 64px;
+    display: flex;
+    flex-direction: column;
+    gap: 44px;
+  }
+  h1, h2, h3 {
+    font-family: "Archivo", "IBM Plex Sans", system-ui, sans-serif;
+    font-stretch: 112%;
+    text-wrap: balance;
+    margin: 0;
+    line-height: 1.15;
+  }
+  h1 { font-size: clamp(28px, 4.4vw, 40px); font-weight: 700; letter-spacing: -0.01em; }
+  h2 { font-size: 21px; font-weight: 600; }
+  h3 { font-size: 16px; font-weight: 600; }
+  p { margin: 0; max-width: 70ch; }
+  .lede { font-size: 17px; color: var(--muted); }
+  header, section { display: flex; flex-direction: column; gap: 14px; }
+  code, .mono { font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: 0.92em; }
+  code { background: var(--chip); padding: 1px 5px; border-radius: 4px; }
+
+  .note {
+    border-left: 3px solid var(--warn);
+    background: var(--warn-bg);
+    padding: 12px 16px;
+    border-radius: 0 8px 8px 0;
+    max-width: 76ch;
+  }
+  .note strong { color: var(--warn); }
+
+  figure { margin: 0; display: flex; flex-direction: column; gap: 10px; }
+  .scroll { overflow-x: auto; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); }
+  .scroll svg { display: block; width: 100%; min-width: 960px; height: auto; }
+  figcaption { color: var(--muted); font-size: 13.5px; max-width: 80ch; }
+
+  /* ---- drawing */
+  svg text { font-family: "IBM Plex Sans", system-ui, sans-serif; fill: var(--ink); font-size: 12px; }
+  .board { fill: var(--board); }
+  .board-t { fill: var(--board-ink); font-family: "IBM Plex Mono", ui-monospace, monospace; font-weight: 600; font-size: 13px; letter-spacing: 0.04em; }
+  .pin { font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: 11.5px; fill: var(--board-dim); }
+  .pin.used { fill: var(--board-ink); font-weight: 600; }
+  .pad { fill: var(--board-dim); }
+  .part { fill: var(--part); stroke: var(--line); stroke-width: 1.4; }
+  .part.opt { stroke-dasharray: 6 4; }
+  .pt { font-weight: 600; font-size: 13px; }
+  .ps { fill: var(--muted); font-size: 11.5px; }
+  .pn { font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: 11.5px; }
+  .wire { fill: none; stroke-width: 2.4; stroke-linejoin: round; stroke-linecap: round; }
+  .i2c { stroke: var(--w-i2c); }     .f-i2c { fill: var(--w-i2c); }
+  .servo { stroke: var(--w-servo); } .f-servo { fill: var(--w-servo); }
+  .sensor { stroke: var(--w-sensor); } .f-sensor { fill: var(--w-sensor); }
+  .buzz { stroke: var(--w-buzz); }   .f-buzz { fill: var(--w-buzz); }
+  .v33 { stroke: var(--w-3v3); }     .f-v33 { fill: var(--w-3v3); }
+  .v5 { stroke: var(--w-5v); }       .f-v5 { fill: var(--w-5v); }
+  .bat { stroke: var(--w-bat); }     .f-bat { fill: var(--w-bat); }
+  .gnd { stroke: var(--w-gnd); }     .f-gnd { fill: var(--w-gnd); }
+  .flag rect { stroke: none; }
+  .flag text { fill: var(--surface); font-family: "IBM Plex Mono", ui-monospace, monospace; font-weight: 600; font-size: 11px; }
+  .res { fill: var(--surface); stroke: var(--ink); stroke-width: 1.4; }
+
+  /* ---- tables */
+  .tablewrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); }
+  table { border-collapse: collapse; width: 100%; font-size: 14px; }
+  th, td { text-align: left; vertical-align: top; padding: 10px 14px; border-bottom: 1px solid var(--line); }
+  tr:last-child td { border-bottom: 0; }
+  th { font-weight: 600; font-size: 12px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); white-space: nowrap; }
+  td.num { font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .wide { min-width: 820px; }
+  .dim { color: var(--muted); }
+  .sw { display: inline-block; width: 22px; height: 4px; border-radius: 2px; vertical-align: middle; margin-right: 8px; }
+
+  .two { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 28px; align-items: start; }
+  .two > div { display: flex; flex-direction: column; gap: 12px; }
+  ul { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 6px; max-width: 70ch; }
+
+  ol.steps { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 14px; counter-reset: step; }
+  ol.steps > li {
+    counter-increment: step;
+    display: grid; grid-template-columns: 44px 1fr; gap: 14px;
+    border: 1px solid var(--line); border-radius: 10px; background: var(--surface); padding: 16px 18px;
+  }
+  ol.steps > li::before {
+    content: counter(step);
+    font-family: "Archivo", system-ui, sans-serif; font-stretch: 112%; font-weight: 700; font-size: 22px;
+    color: var(--accent); line-height: 1.1;
+  }
+  .step { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+  .check { color: var(--muted); font-size: 14px; }
+  .check strong { color: var(--accent); font-weight: 600; }
+</style>
+</head>
+<body>
+<div class="page">
+
+<header>
+  <h1>Circuito y armado</h1>
+  <p class="lede">Cómo se conecta cada pieza del robot y en qué orden armarlo, probando de a una. Los pines son los que usa el firmware en <code>Config.h</code>.</p>
+  <p class="note"><strong>Antes de empezar.</strong> Esta guía sale del código y de las piezas que están en el CAD; nadie la probó todavía sobre el robot armado. La parte de alimentación es la que recomiendo: no sé cómo está cableado hoy tu robot, y en el CAD no hay ni elevador de tensión ni interruptor.</p>
+</header>
+
+<section>
+  <h2>Qué necesitás</h2>
+  <div class="tablewrap">
+    <table class="wide">
+      <thead><tr><th>Pieza</th><th>Cant.</th><th>Detalle</th><th>En el CAD</th></tr></thead>
+      <tbody>
+        <tr><td>ESP32 DevKit V1</td><td class="num">1</td><td>La de 30 pines (DOIT)</td><td>sí</td></tr>
+        <tr><td>Pantalla OLED 0,96"</td><td class="num">1</td><td>SSD1306, 128×64, I2C de 4 pines</td><td>sí</td></tr>
+        <tr><td>Micro servo GH-S37D</td><td class="num">2</td><td>3,7 g. Los vendedores lo listan para 3,6–4,8 V</td><td>sí</td></tr>
+        <tr><td>Sensor de movimiento PIR</td><td class="num">1</td><td>AM312 mini (2,7–12 V) o HC-SR501 (4,5–20 V)</td><td class="dim">no identificado</td></tr>
+        <tr><td>LDR + resistencia de 10 kΩ</td><td class="num">1</td><td>Forman un divisor de tensión</td><td class="dim">no identificado</td></tr>
+        <tr><td>DHT11 en módulo</td><td class="num">1</td><td>De 3 pines, ya trae su resistencia</td><td>sí</td></tr>
+        <tr><td>Buzzer pasivo + resistencia de 100 Ω</td><td class="num">1</td><td>Tipo piezo (KY-006). Opcional</td><td class="dim">solo en el CAD viejo</td></tr>
+        <tr><td>Batería LiPo 1S</td><td class="num">1</td><td>3,7 V. En el CAD mide 30×20×5 mm, unos 300 mAh</td><td>sí</td></tr>
+        <tr><td>Cargador TP4056 con protección</td><td class="num">1</td><td>USB-C, con salidas B+ B− OUT+ OUT−</td><td>sí</td></tr>
+        <tr><td>Elevador de tensión a 5 V</td><td class="num">1</td><td>MT3608 o uno fijo de 5 V</td><td class="dim">no está</td></tr>
+        <tr><td>Interruptor deslizante</td><td class="num">1</td><td>Para apagar sin desenchufar la batería</td><td class="dim">no está</td></tr>
+        <tr><td>Capacitor electrolítico</td><td class="num">1</td><td>470 a 1000 µF, 10 V o más</td><td class="dim">no está</td></tr>
+        <tr><td>Sensor de sonido</td><td class="num">1</td><td>KY-037 o KY-038. Opcional</td><td class="dim">no está</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section>
+  <h2>Las señales</h2>
+  <figure>
+    <div class="scroll">
+      <svg id="fig-senales" viewBox="0 0 1100 600" role="img" aria-label="Conexiones de señal: la pantalla va a D22 y D21, el PIR a D4, el buzzer a D2, el DHT11 a D15, el LDR a D34, el servo de la oreja derecha a D12, el de la izquierda a D13 y el sensor de sonido opcional a D35.">
+        <!-- wires -->
+        <path class="wire sensor" d="M230,190 L450,190"/>
+        <path class="wire sensor" d="M450,220 L330,220 L330,308 L290,308" stroke-dasharray="7 5"/>
+        <path class="wire servo" d="M450,430 L290,430"/>
+        <path class="wire servo" d="M450,460 L380,460 L380,517 L290,517"/>
+        <path class="wire i2c" d="M650,130 L810,130"/>
+        <path class="wire i2c" d="M650,220 L810,220"/>
+        <path class="wire sensor" d="M650,400 L720,400 L720,322 L810,322"/>
+        <path class="wire buzz" d="M650,430 L810,430"/>
+        <path class="wire sensor" d="M650,460 L745,460 L745,522 L810,522"/>
+
+        <!-- board -->
+        <rect class="board" x="450" y="40" width="200" height="530" rx="10"/>
+        <rect x="515" y="40" width="70" height="16" rx="3" fill="var(--board-dim)" opacity="0.45"/>
+        <text class="board-t" x="550" y="76" text-anchor="middle">ESP32 DevKit V1</text>
+        <rect x="524" y="552" width="52" height="18" rx="3" fill="var(--board-dim)"/>
+        <text class="pin" x="550" y="545" text-anchor="middle">USB</text>
+
+        <g class="pad">
+          <circle cx="450" cy="100" r="3"/><circle cx="450" cy="130" r="3"/><circle cx="450" cy="160" r="3"/>
+          <circle cx="450" cy="250" r="3"/><circle cx="450" cy="280" r="3"/><circle cx="450" cy="310" r="3"/>
+          <circle cx="450" cy="340" r="3"/><circle cx="450" cy="370" r="3"/><circle cx="450" cy="400" r="3"/>
+          <circle cx="650" cy="100" r="3"/><circle cx="650" cy="160" r="3"/><circle cx="650" cy="190" r="3"/>
+          <circle cx="650" cy="250" r="3"/><circle cx="650" cy="280" r="3"/><circle cx="650" cy="310" r="3"/>
+          <circle cx="650" cy="340" r="3"/><circle cx="650" cy="370" r="3"/>
+        </g>
+        <circle class="f-sensor" cx="450" cy="190" r="4.5"/><circle class="f-sensor" cx="450" cy="220" r="4.5"/>
+        <circle class="f-servo" cx="450" cy="430" r="4.5"/><circle class="f-servo" cx="450" cy="460" r="4.5"/>
+        <circle class="f-gnd" cx="450" cy="490" r="4.5"/><circle class="f-v5" cx="450" cy="520" r="4.5"/>
+        <circle class="f-i2c" cx="650" cy="130" r="4.5"/><circle class="f-i2c" cx="650" cy="220" r="4.5"/>
+        <circle class="f-sensor" cx="650" cy="400" r="4.5"/><circle class="f-buzz" cx="650" cy="430" r="4.5"/>
+        <circle class="f-sensor" cx="650" cy="460" r="4.5"/>
+        <circle class="f-gnd" cx="650" cy="490" r="4.5"/><circle class="f-v33" cx="650" cy="520" r="4.5"/>
+
+        <g>
+          <text class="pin" x="462" y="104">EN</text><text class="pin" x="462" y="134">VP</text><text class="pin" x="462" y="164">VN</text>
+          <text class="pin used" x="462" y="194">D34</text><text class="pin used" x="462" y="224">D35</text>
+          <text class="pin" x="462" y="254">D32</text><text class="pin" x="462" y="284">D33</text><text class="pin" x="462" y="314">D25</text>
+          <text class="pin" x="462" y="344">D26</text><text class="pin" x="462" y="374">D27</text><text class="pin" x="462" y="404">D14</text>
+          <text class="pin used" x="462" y="434">D12</text><text class="pin used" x="462" y="464">D13</text>
+          <text class="pin used" x="462" y="494">GND</text><text class="pin used" x="462" y="524">VIN</text>
+        </g>
+        <g text-anchor="end">
+          <text class="pin" x="638" y="104">D23</text><text class="pin used" x="638" y="134">D22</text>
+          <text class="pin" x="638" y="164">TX0</text><text class="pin" x="638" y="194">RX0</text>
+          <text class="pin used" x="638" y="224">D21</text><text class="pin" x="638" y="254">D19</text>
+          <text class="pin" x="638" y="284">D18</text><text class="pin" x="638" y="314">D5</text>
+          <text class="pin" x="638" y="344">TX2</text><text class="pin" x="638" y="374">RX2</text>
+          <text class="pin used" x="638" y="404">D4</text><text class="pin used" x="638" y="434">D2</text>
+          <text class="pin used" x="638" y="464">D15</text><text class="pin used" x="638" y="494">GND</text>
+          <text class="pin used" x="638" y="524">3V3</text>
+        </g>
+
+        <!-- rails at the board -->
+        <g class="flag"><rect class="f-gnd" x="398" y="481" width="42" height="18" rx="4"/><text x="419" y="494" text-anchor="middle">GND</text></g>
+        <g class="flag"><rect class="f-v5" x="398" y="511" width="42" height="18" rx="4"/><text x="419" y="524" text-anchor="middle">5V</text></g>
+        <g class="flag"><rect class="f-gnd" x="660" y="481" width="42" height="18" rx="4"/><text x="681" y="494" text-anchor="middle">GND</text></g>
+        <g class="flag"><rect class="f-v33" x="660" y="511" width="42" height="18" rx="4"/><text x="681" y="524" text-anchor="middle">3V3</text></g>
+
+        <!-- light sensor -->
+        <rect class="part" x="40" y="110" width="250" height="152" rx="10"/>
+        <text class="pt" x="54" y="132">Sensor de luz</text>
+        <text class="ps" x="54" y="150">divisor de tensión</text>
+        <text class="ps" x="54" y="196">más luz,</text>
+        <text class="ps" x="54" y="211">lectura más baja</text>
+        <path class="wire v33" d="M230,142 L230,152"/>
+        <path class="wire sensor" d="M230,176 L230,204"/>
+        <path class="wire gnd" d="M230,228 L230,238"/>
+        <rect class="res" x="222" y="152" width="16" height="24" rx="2"/>
+        <rect class="res" x="222" y="204" width="16" height="24" rx="2"/>
+        <text class="pn" x="214" y="168" text-anchor="end">10 kΩ</text>
+        <text class="pn" x="214" y="220" text-anchor="end">LDR</text>
+        <circle class="f-sensor" cx="230" cy="190" r="4"/>
+        <g class="flag"><rect class="f-v33" x="209" y="122" width="42" height="18" rx="4"/><text x="230" y="135" text-anchor="middle">3V3</text></g>
+        <g class="flag"><rect class="f-gnd" x="209" y="238" width="42" height="18" rx="4"/><text x="230" y="251" text-anchor="middle">GND</text></g>
+
+        <!-- sound sensor -->
+        <rect class="part opt" x="40" y="275" width="250" height="80" rx="10"/>
+        <text class="pt" x="54" y="297">Sensor de sonido</text>
+        <text class="ps" x="54" y="314">opcional</text>
+        <text class="pn" x="280" y="312" text-anchor="end">D0</text>
+        <g class="flag"><rect class="f-v33" x="54" y="326" width="42" height="18" rx="4"/><text x="75" y="339" text-anchor="middle">3V3</text></g>
+        <g class="flag"><rect class="f-gnd" x="102" y="326" width="42" height="18" rx="4"/><text x="123" y="339" text-anchor="middle">GND</text></g>
+
+        <!-- servos -->
+        <rect class="part" x="40" y="368" width="250" height="74" rx="10"/>
+        <text class="pt" x="54" y="390">Servo oreja derecha</text>
+        <text class="pn" x="280" y="434" text-anchor="end">señal</text>
+        <g class="flag"><rect class="f-bat" x="54" y="416" width="46" height="18" rx="4"/><text x="77" y="429" text-anchor="middle">BAT+</text></g>
+        <g class="flag"><rect class="f-gnd" x="106" y="416" width="42" height="18" rx="4"/><text x="127" y="429" text-anchor="middle">GND</text></g>
+
+        <rect class="part" x="40" y="455" width="250" height="74" rx="10"/>
+        <text class="pt" x="54" y="477">Servo oreja izquierda</text>
+        <text class="pn" x="280" y="521" text-anchor="end">señal</text>
+        <g class="flag"><rect class="f-bat" x="54" y="503" width="46" height="18" rx="4"/><text x="77" y="516" text-anchor="middle">BAT+</text></g>
+        <g class="flag"><rect class="f-gnd" x="106" y="503" width="42" height="18" rx="4"/><text x="127" y="516" text-anchor="middle">GND</text></g>
+
+        <!-- OLED -->
+        <rect class="part" x="810" y="70" width="250" height="170" rx="10"/>
+        <text class="pt" x="1046" y="94" text-anchor="end">Pantalla OLED</text>
+        <text class="ps" x="1046" y="111" text-anchor="end">SSD1306, dirección 0x3C</text>
+        <text class="pn" x="822" y="134">SCL</text>
+        <text class="pn" x="822" y="224">SDA</text>
+        <g class="flag"><rect class="f-v33" x="822" y="166" width="42" height="18" rx="4"/><text x="843" y="179" text-anchor="middle">3V3</text></g>
+        <g class="flag"><rect class="f-gnd" x="870" y="166" width="42" height="18" rx="4"/><text x="891" y="179" text-anchor="middle">GND</text></g>
+        <text class="ps" x="922" y="179">VCC y GND</text>
+
+        <!-- PIR -->
+        <rect class="part" x="810" y="262" width="250" height="74" rx="10"/>
+        <text class="pt" x="1046" y="284" text-anchor="end">Sensor de movimiento</text>
+        <text class="pn" x="822" y="326">OUT</text>
+        <g class="flag"><rect class="f-v33" x="922" y="296" width="42" height="18" rx="4"/><text x="943" y="309" text-anchor="middle">3V3</text></g>
+        <g class="flag"><rect class="f-gnd" x="970" y="296" width="42" height="18" rx="4"/><text x="991" y="309" text-anchor="middle">GND</text></g>
+
+        <!-- buzzer -->
+        <rect class="part opt" x="810" y="372" width="250" height="74" rx="10"/>
+        <text class="pt" x="1046" y="394" text-anchor="end">Buzzer pasivo</text>
+        <text class="ps" x="1046" y="411" text-anchor="end">opcional</text>
+        <text class="pn" x="822" y="434">+</text>
+        <g class="flag"><rect class="f-gnd" x="836" y="404" width="42" height="18" rx="4"/><text x="857" y="417" text-anchor="middle">GND</text></g>
+        <rect class="res" x="752" y="422" width="30" height="16" rx="2"/>
+        <text class="pn" x="767" y="416" text-anchor="middle">100 Ω</text>
+
+        <!-- DHT11 -->
+        <rect class="part" x="810" y="460" width="250" height="76" rx="10"/>
+        <text class="pt" x="1046" y="482" text-anchor="end">DHT11</text>
+        <text class="ps" x="1046" y="499" text-anchor="end">temperatura y humedad</text>
+        <text class="pn" x="822" y="526">S</text>
+        <g class="flag"><rect class="f-v33" x="850" y="509" width="42" height="18" rx="4"/><text x="871" y="522" text-anchor="middle">3V3</text></g>
+        <g class="flag"><rect class="f-gnd" x="898" y="509" width="42" height="18" rx="4"/><text x="919" y="522" text-anchor="middle">GND</text></g>
+      </svg>
+    </div>
+    <figcaption>Cada etiqueta de color es un riel: todos los <span class="mono">3V3</span> van juntos al pin 3V3 del ESP32, todos los <span class="mono">GND</span> juntos, y <span class="mono">BAT+</span> es el positivo de la batería después del interruptor. Guiate por el nombre impreso al lado de cada pin de tu placa: el orden puede cambiar entre fabricantes.</figcaption>
+  </figure>
+
+  <div class="tablewrap">
+    <table class="wide">
+      <thead><tr><th>Pieza</th><th>Pin de la pieza</th><th>Va a</th><th>Constante en Config.h</th></tr></thead>
+      <tbody>
+        <tr><td rowspan="4">Pantalla OLED</td><td>SCL</td><td><span class="sw" style="background:var(--w-i2c)"></span>D22</td><td rowspan="2" class="dim">fijos, son los del I2C</td></tr>
+        <tr><td>SDA</td><td><span class="sw" style="background:var(--w-i2c)"></span>D21</td></tr>
+        <tr><td>VCC</td><td><span class="sw" style="background:var(--w-3v3)"></span>3V3</td><td></td></tr>
+        <tr><td>GND</td><td><span class="sw" style="background:var(--w-gnd)"></span>GND</td><td></td></tr>
+        <tr><td rowspan="3">Servo oreja izquierda</td><td>señal (naranja o amarillo)</td><td><span class="sw" style="background:var(--w-servo)"></span>D13</td><td class="mono">PIN_SERVO_LEFT</td></tr>
+        <tr><td>+ (rojo)</td><td><span class="sw" style="background:var(--w-bat)"></span>BAT+</td><td></td></tr>
+        <tr><td>− (marrón o negro)</td><td><span class="sw" style="background:var(--w-gnd)"></span>GND</td><td></td></tr>
+        <tr><td rowspan="3">Servo oreja derecha</td><td>señal</td><td><span class="sw" style="background:var(--w-servo)"></span>D12</td><td class="mono">PIN_SERVO_RIGHT</td></tr>
+        <tr><td>+</td><td><span class="sw" style="background:var(--w-bat)"></span>BAT+</td><td></td></tr>
+        <tr><td>−</td><td><span class="sw" style="background:var(--w-gnd)"></span>GND</td><td></td></tr>
+        <tr><td rowspan="3">Sensor de movimiento</td><td>OUT</td><td><span class="sw" style="background:var(--w-sensor)"></span>D4</td><td class="mono">PIN_PIR</td></tr>
+        <tr><td>VCC</td><td><span class="sw" style="background:var(--w-3v3)"></span>3V3 si es AM312. <span class="sw" style="background:var(--w-5v)"></span>5V si es HC-SR501</td><td></td></tr>
+        <tr><td>GND</td><td><span class="sw" style="background:var(--w-gnd)"></span>GND</td><td></td></tr>
+        <tr><td rowspan="3">Sensor de luz</td><td>resistencia de 10 kΩ</td><td>entre <span class="sw" style="background:var(--w-3v3)"></span>3V3 y D34</td><td rowspan="3" class="mono">PIN_LDR<br>LDR_BRIGHT_IS_LOW</td></tr>
+        <tr><td>LDR</td><td>entre D34 y <span class="sw" style="background:var(--w-gnd)"></span>GND</td></tr>
+        <tr><td>unión de los dos</td><td><span class="sw" style="background:var(--w-sensor)"></span>D34</td></tr>
+        <tr><td rowspan="3">DHT11</td><td>S (datos)</td><td><span class="sw" style="background:var(--w-sensor)"></span>D15</td><td class="mono">PIN_DHT</td></tr>
+        <tr><td>VCC (centro)</td><td><span class="sw" style="background:var(--w-3v3)"></span>3V3</td><td></td></tr>
+        <tr><td>−</td><td><span class="sw" style="background:var(--w-gnd)"></span>GND</td><td></td></tr>
+        <tr><td rowspan="2">Buzzer pasivo</td><td>+</td><td><span class="sw" style="background:var(--w-buzz)"></span>D2, con 100 Ω en serie</td><td class="mono">PIN_BUZZER</td></tr>
+        <tr><td>−</td><td><span class="sw" style="background:var(--w-gnd)"></span>GND</td><td></td></tr>
+        <tr><td rowspan="3">Sensor de sonido</td><td>D0</td><td><span class="sw" style="background:var(--w-sensor)"></span>D35</td><td class="mono">PIN_MIC 35</td></tr>
+        <tr><td>VCC (+)</td><td><span class="sw" style="background:var(--w-3v3)"></span>3V3, no 5 V</td><td></td></tr>
+        <tr><td>GND</td><td><span class="sw" style="background:var(--w-gnd)"></span>GND</td><td></td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section>
+  <h2>La alimentación</h2>
+  <figure>
+    <div class="scroll">
+      <svg id="fig-alimentacion" viewBox="0 0 1100 340" role="img" aria-label="Alimentación: la batería entra al cargador TP4056, la salida pasa por el interruptor y forma el riel BAT+. De BAT+ salen los dos servos con un capacitor y el elevador a 5 voltios que alimenta el pin VIN del ESP32. El pin 3V3 del ESP32 alimenta la pantalla y los sensores.">
+        <!-- wires -->
+        <path class="wire bat" d="M190,84 L240,84"/>
+        <path class="wire gnd" d="M190,108 L240,108"/>
+        <path class="wire bat" d="M420,95 L470,95"/>
+        <path class="wire bat" d="M590,95 L690,95"/>
+        <path class="wire bat" d="M640,95 L640,225 L690,225"/>
+        <path class="wire v5" d="M850,95 L900,95"/>
+        <path class="wire bat" d="M850,225 L900,225"/>
+        <path class="wire v33" d="M1040,130 L1040,311 L1020,311"/>
+        <circle class="f-bat" cx="640" cy="95" r="4.5"/>
+
+        <text class="pn" x="215" y="76" text-anchor="middle">B+</text>
+        <text class="pn" x="215" y="126" text-anchor="middle">B−</text>
+        <text class="pn" x="445" y="86" text-anchor="middle">OUT+</text>
+        <text class="pn" x="640" y="82" text-anchor="middle" style="fill:var(--w-bat);font-weight:600">BAT+ 3,7–4,2 V</text>
+        <text class="pn" x="875" y="86" text-anchor="middle" style="fill:var(--w-5v);font-weight:600">5 V</text>
+        <text class="pn" x="1050" y="222" style="fill:var(--w-3v3);font-weight:600">3V3</text>
+
+        <!-- parts -->
+        <rect class="part" x="30" y="60" width="160" height="70" rx="10"/>
+        <text class="pt" x="110" y="91" text-anchor="middle">Batería LiPo</text>
+        <text class="ps" x="110" y="109" text-anchor="middle">1 celda, 3,7 V</text>
+
+        <rect class="part" x="240" y="60" width="180" height="70" rx="10"/>
+        <text class="pt" x="330" y="91" text-anchor="middle">Cargador TP4056</text>
+        <text class="ps" x="330" y="109" text-anchor="middle">USB-C, con protección</text>
+
+        <rect class="part" x="470" y="60" width="120" height="70" rx="10"/>
+        <text class="pt" x="530" y="100" text-anchor="middle">Interruptor</text>
+
+        <rect class="part" x="690" y="60" width="160" height="70" rx="10"/>
+        <text class="pt" x="770" y="91" text-anchor="middle">Elevador a 5 V</text>
+        <text class="ps" x="770" y="109" text-anchor="middle">ajustado antes de conectar</text>
+
+        <rect class="part" x="900" y="60" width="160" height="70" rx="10"/>
+        <text class="pt" x="980" y="91" text-anchor="middle">ESP32</text>
+        <text class="ps" x="980" y="109" text-anchor="middle">entra por VIN</text>
+
+        <rect class="part" x="690" y="190" width="160" height="70" rx="10"/>
+        <text class="pt" x="770" y="221" text-anchor="middle">Los dos servos</text>
+        <text class="ps" x="770" y="239" text-anchor="middle">cable rojo</text>
+
+        <rect class="part" x="900" y="190" width="110" height="70" rx="10"/>
+        <text class="pt" x="955" y="221" text-anchor="middle">Capacitor</text>
+        <text class="ps" x="955" y="239" text-anchor="middle">470–1000 µF</text>
+
+        <rect class="part" x="600" y="296" width="420" height="32" rx="10"/>
+        <text class="ps" x="810" y="316" text-anchor="middle" style="fill:var(--ink)">pantalla · DHT11 · sensor de luz · PIR mini · sonido</text>
+
+        <!-- ground: one flag per part -->
+        <g class="flag"><rect class="f-gnd" x="309" y="138" width="42" height="18" rx="4"/><text x="330" y="151" text-anchor="middle">GND</text></g>
+        <text class="ps" x="358" y="151">es OUT−</text>
+        <g class="flag"><rect class="f-gnd" x="749" y="138" width="42" height="18" rx="4"/><text x="770" y="151" text-anchor="middle">GND</text></g>
+        <g class="flag"><rect class="f-gnd" x="939" y="138" width="42" height="18" rx="4"/><text x="960" y="151" text-anchor="middle">GND</text></g>
+        <g class="flag"><rect class="f-gnd" x="749" y="268" width="42" height="18" rx="4"/><text x="770" y="281" text-anchor="middle">GND</text></g>
+        <g class="flag"><rect class="f-gnd" x="934" y="268" width="42" height="18" rx="4"/><text x="955" y="281" text-anchor="middle">GND</text></g>
+        <g class="flag"><rect class="f-gnd" x="550" y="303" width="42" height="18" rx="4"/><text x="571" y="316" text-anchor="middle">GND</text></g>
+        <text class="ps" x="30" y="316" style="fill:var(--w-gnd);font-weight:600">Todos los GND van unidos al OUT− del cargador.</text>
+      </svg>
+    </div>
+    <figcaption>Los servos se alimentan directo de la batería, que está dentro de su rango. El ESP32 necesita los 5 V del elevador. La pantalla y los sensores salen del pin 3V3 de la placa.</figcaption>
+  </figure>
+
+  <div class="two">
+    <div>
+      <h3>Por qué un elevador a 5 V</h3>
+      <p>El pin VIN del ESP32 pasa por un regulador que necesita más tensión de la que entrega para poder dar 3,3 V estables; la placa pide entre 4 y 12 V en VIN. Una LiPo da entre 3,7 y 4,2 V: conectada directo puede encender, pero se reinicia cuando se mueven las orejas o baja la carga.</p>
+      <p>Si es un MT3608, viene regulado muy alto de fábrica. Conectalo solo a la batería, medí la salida con el tester y girá el tornillo hasta leer 5,0 V. Recién entonces conectá el ESP32.</p>
+    </div>
+    <div>
+      <h3>La corriente de carga</h3>
+      <p>Casi todos los TP4056 vienen configurados para cargar a 1 A, que es demasiado para una batería de 300 mAh. Se cambia reemplazando la resistencia marcada R3 o RPROG.</p>
+      <div class="tablewrap">
+        <table>
+          <thead><tr><th>Resistencia</th><th>Corriente</th><th>Para baterías de</th></tr></thead>
+          <tbody>
+            <tr><td class="num">1,2 kΩ</td><td class="num">1000 mA</td><td>1000 mAh o más</td></tr>
+            <tr><td class="num">2 kΩ</td><td class="num">580 mA</td><td>600 mAh</td></tr>
+            <tr><td class="num">4 kΩ</td><td class="num">300 mA</td><td>300 mAh</td></tr>
+            <tr><td class="num">5 kΩ</td><td class="num">250 mA</td><td>250 mAh</td></tr>
+            <tr><td class="num">10 kΩ</td><td class="num">130 mA</td><td>150 mAh</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <p class="note"><strong>Con la LiPo, cuidado.</strong> Revisá la polaridad antes de soldar: B+ con el cable rojo de la batería. No dejes que se toquen los dos cables, no la cargues sin estar presente y no la uses si está hinchada.</p>
+</section>
+
+<section>
+  <h2>Paso a paso</h2>
+  <p>Armalo primero sobre la mesa, con cables largos, y recién al final metelo en el cuerpo. Después de cada paso hay una prueba: si falla, el problema está en lo último que conectaste.</p>
+  <ol class="steps">
+    <li><div class="step">
+      <h3>El ESP32 solo</h3>
+      <p>Conectalo por USB sin nada más y cargá el firmware: <code>arduino-cli compile --fqbn esp32:esp32:esp32 .</code> y después <code>upload -p COM3</code>. Abrí el monitor serie a 115200.</p>
+      <p class="check"><strong>Prueba:</strong> tiene que aparecer <span class="mono">robot ready (type 'list')</span>.</p>
+    </div></li>
+    <li><div class="step">
+      <h3>La pantalla</h3>
+      <p>Cuatro cables: VCC a 3V3, GND a GND, SCL a D22, SDA a D21. Mirá las letras del módulo, porque algunos traen VCC y GND en el orden inverso.</p>
+      <p class="check"><strong>Prueba:</strong> al reiniciar, la pantalla enciende como un televisor viejo y aparecen los ojos. Escribí <span class="mono">love</span> en el monitor serie y cambian a corazones.</p>
+    </div></li>
+    <li><div class="step">
+      <h3>El DHT11</h3>
+      <p>S a D15, el pin del centro a 3V3, el − a GND.</p>
+      <p class="check"><strong>Prueba:</strong> esperá 5 segundos y escribí <span class="mono">status</span>: <span class="mono">temp</span> y <span class="mono">hum</span> ya no están en cero. Con <span class="mono">info</span> se ve la pantalla de temperatura.</p>
+    </div></li>
+    <li><div class="step">
+      <h3>El sensor de luz</h3>
+      <p>La resistencia de 10 kΩ entre 3V3 y D34, el LDR entre D34 y GND.</p>
+      <p class="check"><strong>Prueba:</strong> en <span class="mono">status</span>, el valor <span class="mono">ldr</span> sube al taparlo con la mano. Si baja, lo armaste al revés: o invertís las dos piezas, o ponés <span class="mono">LDR_BRIGHT_IS_LOW 0</span>. Tapado 8 segundos, el robot bosteza y se duerme.</p>
+    </div></li>
+    <li><div class="step">
+      <h3>El sensor de movimiento</h3>
+      <p>OUT a D4. La alimentación depende del modelo: el AM312 va a 3V3, el HC-SR501 necesita los 5 V.</p>
+      <p class="check"><strong>Prueba:</strong> dejalo quieto un minuto para que se estabilice. Al pasar la mano, <span class="mono">status</span> muestra <span class="mono">pir=1</span> y el robot saluda con «HOLA!».</p>
+    </div></li>
+    <li><div class="step">
+      <h3>El buzzer</h3>
+      <p>El + a D2 pasando por la resistencia de 100 Ω, el − a GND. Si no vas a poner buzzer, dejá <span class="mono">PIN_BUZZER -1</span>.</p>
+      <p class="check"><strong>Prueba:</strong> <span class="mono">act pacman</span> suena con cada punto que come. El LED azul de la placa parpadea junto con el sonido: comparten el pin, es normal.</p>
+    </div></li>
+    <li><div class="step">
+      <h3>La alimentación</h3>
+      <p>Sin el ESP32 conectado: batería al TP4056, salida al interruptor, de ahí al elevador. Ajustá el elevador a 5,0 V con el tester. Soldá el capacitor entre BAT+ y GND, cerca de donde van a ir los servos, con la raya del capacitor del lado de GND.</p>
+      <p class="check"><strong>Prueba:</strong> 5,0 V en la salida del elevador y entre 3,7 y 4,2 V en BAT+. Recién ahora conectá el elevador a VIN y GND, desenchufá el USB y encendé con el interruptor: el robot arranca igual que antes.</p>
+    </div></li>
+    <li><div class="step">
+      <h3>Las orejas</h3>
+      <p>Señales a D13 y D12, los rojos a BAT+, los marrones a GND. Todavía sin las orejas puestas en el eje.</p>
+      <p class="check"><strong>Prueba:</strong> <span class="mono">happy</span> hace mover los dos ejes. Si el robot se reinicia cuando se mueven, falta el capacitor o la batería está baja.</p>
+    </div></li>
+    <li><div class="step">
+      <h3>Calibrar las orejas</h3>
+      <p>Escribí <span class="mono">asleep</span>: el firmware lleva los servos a la posición de oreja acostada hacia atrás. Con los ejes así, encastrá cada oreja apuntando hacia atrás. Después probá <span class="mono">surprised</span>, que las para derechas, y <span class="mono">furious</span>, que las lleva hacia adelante.</p>
+      <p class="check"><strong>Prueba:</strong> las dos orejas hacen lo mismo, en espejo. Si una va al revés, cambiá el signo de su <span class="mono">EAR_..._DIR</span> en <span class="mono">Config.h</span> y su <span class="mono">EAR_..._ZERO</span> entre 0 y 170.</p>
+    </div></li>
+    <li><div class="step">
+      <h3>Al cuerpo</h3>
+      <p>Según el CAD: la pantalla adelante en la cabeza, el ESP32 parado detrás de ella, los dos servos arriba y atrás con los ejes hacia los costados, el DHT11 contra la ventana trasera, la batería en el medio y el cargador abajo con el USB-C hacia atrás.</p>
+      <p class="check"><strong>Prueba:</strong> antes de cerrar, <span class="mono">status</span> una vez más y una vuelta completa: taparlo, pasarle la mano, moverle las orejas.</p>
+    </div></li>
+  </ol>
+</section>
+
+<section>
+  <h2>Pines con trampa</h2>
+  <div class="tablewrap">
+    <table class="wide">
+      <thead><tr><th>Pin</th><th>Qué tiene</th><th>Qué hacer</th></tr></thead>
+      <tbody>
+        <tr><td class="mono">D12</td><td>Al encender tiene que estar en bajo. Si algo lo levanta, el ESP32 no arranca.</td><td>Si con el servo conectado no enciende, pasá la señal a D27 o D26 y cambiá <span class="mono">PIN_SERVO_RIGHT</span>.</td></tr>
+        <tr><td class="mono">D2</td><td>Tiene que estar suelto o en bajo para poder cargar el firmware. Además maneja el LED de la placa.</td><td>Un buzzer piezo no molesta. Si la carga falla, desconectalo y probá de nuevo.</td></tr>
+        <tr><td class="mono">D15</td><td>Si está en bajo al encender, el ESP32 no imprime los mensajes de arranque.</td><td>El DHT11 lo mantiene en alto. No hay que hacer nada.</td></tr>
+        <tr><td class="mono">D34, D35</td><td>Solo entradas, y sin resistencias internas.</td><td>Por eso el LDR lleva su resistencia de 10 kΩ. Nunca dejes D35 configurado sin nada conectado.</td></tr>
+        <tr><td class="mono">cualquier pin</td><td>Entrega como mucho 40 mA y solo tolera 3,3 V.</td><td>Un buzzer magnético o un sensor que devuelva 5 V necesitan un transistor o un divisor.</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section>
+  <h2>Si algo falla</h2>
+  <div class="tablewrap">
+    <table class="wide">
+      <thead><tr><th>Síntoma</th><th>Causa más probable</th><th>Qué revisar</th></tr></thead>
+      <tbody>
+        <tr><td>Se reinicia al mover las orejas</td><td>Cae la tensión cuando arrancan los servos</td><td>Capacitor cerca de los servos, elevador en 5,0 V, batería cargada, servos en BAT+ y no en 3V3</td></tr>
+        <tr><td>No enciende con todo conectado, sí por partes</td><td>D12 levantado por el servo</td><td>Desconectá la señal del servo derecho y probá. Si arranca, cambiá de pin</td></tr>
+        <tr><td>Pantalla en negro</td><td>SDA y SCL cruzados, o VCC y GND invertidos</td><td>Los cuatro cables contra las letras del módulo</td></tr>
+        <tr><td>Se duerme con la luz prendida</td><td>El sensor de luz está al revés</td><td><span class="mono">status</span> tapando y destapando, y <span class="mono">LDR_BRIGHT_IS_LOW</span></td></tr>
+        <tr><td>No se duerme nunca a oscuras</td><td>Todavía no vio suficiente diferencia entre luz y oscuridad</td><td>Tapalo y destapalo un par de veces: aprende el rango solo</td></tr>
+        <tr><td>Saluda a cada rato sin nadie</td><td>El PIR ve una fuente de calor o recién enciende</td><td>Esperá un minuto. Alejalo de ventanas y del propio ESP32</td></tr>
+        <tr><td>Temperatura en cero</td><td>El DHT11 no responde</td><td>Pin S en D15 y alimentación en 3V3</td></tr>
+        <tr><td>Una oreja tiembla quieta</td><td>Ruido en la alimentación</td><td>Capacitor. El firmware ya suelta los servos a los 1,5 s de estar quietos</td></tr>
+        <tr><td>Reacciona a ruidos que no existen</td><td><span class="mono">PIN_MIC</span> definido sin sensor conectado</td><td>Volvelo a <span class="mono">-1</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+</div>
+</body>
+</html>
